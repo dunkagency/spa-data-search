@@ -1,126 +1,84 @@
 <template>
   <div class="flex">
     <Sidebar :results="filteredResults" />
-    
+
     <main class="flex-grow w-2/4 p-6">
       <SearchBox @search="handleSearch" />
-     <div class="flex-grow justify-items-end">
-      <button 
-        @click="fetchData" 
-        class="px-4 py-2 bg-green-500 text-white rounded my-4 flex items-center"
-        :disabled="loading"
-      >
-        <span v-if="loading" class="loader mr-2"></span> Atualizar Dados
-      </button>
-     </div> 
-      
+      <div class="flex-grow justify-items-end">
+        <button 
+          @click="fetchData" 
+          class="px-4 py-2 bg-green-500 text-white rounded my-4 flex items-center"
+          :disabled="loading"
+        >
+          <span v-if="loading" class="loader mr-2"></span> Atualizar Dados
+        </button>
+      </div> 
 
       <div v-if="loading" class="flex justify-center items-center mt-6">
         <div class="loader"></div>
         <p class="ml-2 text-gray-600">Carregando dados...</p>
       </div>
 
-      <BarChart :data="chartData" v-if="!loading" />
-      <DataTable :results="filteredResults" v-if="!loading" />
+      <DataTable :results="filteredResults || []" v-if="!loading"/>
     </main>
   </div>
 </template>
 
 <script>
 import { ref, onMounted } from "vue";
-import BarChart from "../components/BarChart.vue";
 import SearchBox from "../components/SearchBox.vue";
 import DataTable from "../components/DataTable.vue";
 import Sidebar from "../components/SideBar.vue";
 
 export default {
-  components: { BarChart, SearchBox, DataTable, Sidebar },
+  components: { SearchBox, DataTable, Sidebar },
   setup() {
     const allResults = ref([]);
     const filteredResults = ref([]);
-    const chartData = ref({ labels: [], datasets: [] });
     const loading = ref(false);
 
-    // Simulação de API (normalmente a API já enviaria dados com timestamps)
-    const fetchData = async () => {
-      loading.value = true;
-      try {
-        const response = await fetch("https://jsonplaceholder.typicode.com/posts");
-        const data = await response.json();
+    // Mock Data
+    const mockData = [
+      { row: 1, event: '{"id": 1, "name": "Alice", "age": 25, "city": "New York"}' },
+      { row: 2, event: '{"id": 2, "name": "Bob", "age": 30, "city": "Los Angeles"}' },
+      { row: 3, event: '{"id": 3, "name": "Charlie", "age": 28, "city": "Chicago"}' },
+      { row: 4, event: '{"id": 4, "name": "David", "age": 35, "city": "Houston"}' },
+      { row: 5, event: '{"id": 5, "name": "Eve", "age": 22, "city": "Miami"}' },
+      { row: 6, event: '{"id": 6, "name": "Frank", "age": 40, "city": "Seattle"}' },
+      { row: 7, event: '{"id": 7, "name": "Grace", "age": 27, "city": "Boston"}' },
+      { row: 8, event: '{"id": 8, "name": "Hank", "age": 29, "city": "Denver"}' },
+      { row: 9, event: '{"id": 9, "name": "Ivy", "age": 31, "city": "San Francisco"}' },
+      { row: 10, event: '{"id": 10, "name": "Jack", "age": 26, "city": "Dallas"}' }
+    ];
 
-        allResults.value = data.map((item) => ({
-          userId: item.userId,
-          id: item.id,
-          name: item.title,
-          body: item.body,
-          value: Math.floor(Math.random() * 100),
-          date: generateRandomDate() // 🔹 Simulamos uma data aleatória
-        }));
-
-        filteredResults.value = [...allResults.value];
-        updateChart();
-      } catch (error) {
-        console.error("Erro ao buscar dados:", error);
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    // Função para gerar datas aleatórias no intervalo de um mês
-    const generateRandomDate = () => {
-      const start = new Date();
-      start.setMonth(start.getMonth() - 1);
-      const end = new Date();
-      return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()))
-        .toISOString()
-        .split("T")[0]; // Retorna em formato YYYY-MM-DD
-    };
-
-    const updateChart = () => {
-      chartData.value = {
-        labels: filteredResults.value.slice(0, 10).map((item) => item.name),
-        datasets: [
-          {
-            label: "Resultados",
-            data: filteredResults.value.slice(0, 10).map((item) => item.value),
-            backgroundColor: "rgba(75, 192, 192, 0.6)",
-          },
-        ],
-      };
-    };
-
-    const handleSearch = ({ query, timeWindow, startDate, endDate }) => {
+    const fetchData = () => {
       loading.value = true;
       setTimeout(() => {
-        filteredResults.value = allResults.value.filter((item) => {
-          // 🔹 Filtra pelo nome
-          const matchesQuery =
-            item.name.toLowerCase().includes(query.toLowerCase()) ||
-            item.id.toString() === query.trim();
+        allResults.value = [...mockData];
+        filteredResults.value = [...allResults.value];
+        loading.value = false;
+      }, 500);
+    };
 
-          // 🔹 Filtra por intervalo de datas
-          const matchesDate =
-            timeWindow === "custom"
-              ? item.date >= startDate && item.date <= endDate
-              : true;
-
-          return matchesQuery && matchesDate;
-        });
-
-        updateChart();
+    const handleSearch = ({ query }) => {
+      loading.value = true;
+      setTimeout(() => {
+        filteredResults.value = allResults.value.filter((item) =>
+          JSON.stringify(item).toLowerCase().includes(query.toLowerCase())
+        );
         loading.value = false;
       }, 500);
     };
 
     onMounted(fetchData);
 
-    return { filteredResults, chartData, handleSearch, fetchData, loading };
+    return { filteredResults, handleSearch, fetchData, loading };
   },
 };
 </script>
 
 <style>
-/* 🔹 Loader de carregamento */
+/* Loader de carregamento */
 .loader {
   border: 4px solid rgba(0, 0, 0, 0.1);
   border-left-color: #3498db;
@@ -130,21 +88,10 @@ export default {
   animation: spin 1s linear infinite;
 }
 
-/* 🔹 Animação do spinner */
+/* Animação do spinner */
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
-
-/* 🔹 Ajuste dos botões */
-button:disabled {
-  background-color: gray;
-  cursor: not-allowed;
-}
-
-button {
-  transition: all 0.3s;
-}
 </style>
-
